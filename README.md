@@ -4,58 +4,29 @@ Discord bot for tracking kills, deaths, and battles in Albion Online. Written in
 
 ## Quick start
 
-### Download
+### Linux
 
-Grab the latest binary from [Releases](https://github.com/phx7/albion-killgot/releases).
+```bash
+curl -fsSL https://raw.githubusercontent.com/phx7/albion-killgot/main/install.sh | sudo bash
+```
 
-### Configure
+The script will download the latest binary, ask for your Discord bot token, and install it as a systemd service.
 
-Create a `.env` file next to the binary:
+### Windows
+
+Download `bot-windows-amd64.exe` from [Releases](https://github.com/phx7/albion-killgot/releases), create a `.env` file next to it:
 
 ```env
 DISCORD_TOKEN=your_bot_token_here
 ```
 
-Get a token at https://discord.com/developers/applications — create an app, add a Bot, copy the token.
+Then run the `.exe`.
 
-Required bot permissions: `Send Messages`, `Embed Links`  
-Required scopes: `bot`, `applications.commands`
+### Getting a bot token
 
-### Run
-
-**Linux:**
-```bash
-chmod +x bot-linux-amd64
-./bot-linux-amd64
-```
-
-**Windows:**  
-Double-click `bot-windows-amd64.exe` or run from PowerShell.
-
-### Run as a service (Linux)
-
-```bash
-sudo cp bot-linux-amd64 /opt/albion-killgot/bot
-sudo cp .env /opt/albion-killgot/.env
-
-sudo tee /etc/systemd/system/albion-killgot.service > /dev/null <<EOF
-[Unit]
-Description=Albion Killgot Discord Bot
-After=network.target
-
-[Service]
-ExecStart=/opt/albion-killgot/bot
-WorkingDirectory=/opt/albion-killgot
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl enable --now albion-killgot
-sudo journalctl -fu albion-killgot
-```
+1. Go to https://discord.com/developers/applications
+2. Create an application → Bot → Reset Token → copy it
+3. OAuth2 → URL Generator → scopes: `bot`, `applications.commands` → permissions: `Send Messages`, `Embed Links` → invite the bot to your server
 
 ## Commands
 
