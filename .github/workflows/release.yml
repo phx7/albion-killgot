@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+
+      - name: Build binaries
+        run: |
+          VERSION=${GITHUB_REF_NAME}
+          GOOS=linux  GOARCH=amd64 go build -ldflags "-X main.version=${VERSION}" -o bot-linux-amd64   ./cmd/bot/
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=${VERSION}" -o bot-windows-amd64.exe ./cmd/bot/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bot-linux-amd64
+            bot-windows-amd64.exe
+          body: |
+            ## Установка
+
+            ### Linux
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/bot-linux-amd64 -o bot
+            chmod +x bot
+            ```
+            Создай `.env` рядом с бинарником:
+            ```env
+            DISCORD_TOKEN=твой_токен
+            ```
+            Запуск: `./bot`
+
+            ### Windows
+            Скачай `bot-windows-amd64.exe`, положи рядом `.env` файл с токеном и запускай.
