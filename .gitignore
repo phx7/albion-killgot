@@ -5,3 +5,4 @@
 bot-linux-amd64
 bot-windows-amd64.exe
 /bot
+!/internal/bot/
