@@ -1,5 +1,7 @@
 .env
 *.db
+*.db-shm
+*.db-wal
 bot-linux-amd64
 bot-windows-amd64.exe
-bot
+/bot
