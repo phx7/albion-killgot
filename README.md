@@ -1,4 +1,4 @@
-# albion-kill<img src="https://go.dev/blog/go-brand/Go-Logo/SVG/Go-Logo_Blue.svg" height="24" alt="go">t
+# albion-kill<img src="https://go.dev/blog/go-brand/Go-Logo/SVG/Go-Logo_Blue.svg" height="52" alt="go">t
 
 Discord bot for tracking kills, deaths, and battles in Albion Online. Written in Go.
 
