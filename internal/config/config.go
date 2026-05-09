@@ -12,6 +12,7 @@ import (
 type Config struct {
 	DiscordToken string
 	DBPath       string
+	LogLevel     string
 }
 
 func Load() (Config, error) {
@@ -23,6 +24,7 @@ func Load() (Config, error) {
 	var cfg Config
 	flag.StringVar(&cfg.DiscordToken, "discord-token", os.Getenv("DISCORD_TOKEN"), "Discord bot token")
 	flag.StringVar(&cfg.DBPath, "db-path", getEnv("DB_PATH", "killbot.db"), "Path to SQLite database file")
+	flag.StringVar(&cfg.LogLevel, "log-level", getEnv("LOG_LEVEL", "info"), "Log level: debug, info, warn, error")
 	flag.Parse()
 
 	if cfg.DiscordToken == "" {

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
@@ -30,6 +31,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	var logLevel slog.Level
+	switch strings.ToLower(cfg.LogLevel) {
+	case "debug":
+		logLevel = slog.LevelDebug
+	case "warn", "warning":
+		logLevel = slog.LevelWarn
+	case "error":
+		logLevel = slog.LevelError
+	default:
+		logLevel = slog.LevelInfo
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})))
+
 	db, err := store.Open(cfg.DBPath)
 	if err != nil {
 		slog.Error("open db", "err", err)
@@ -39,6 +53,7 @@ func main() {
 
 	settings := store.NewSettingsStore(db)
 	tracking := store.NewTrackingStore(db)
+	perms := store.NewPermissionsStore(db)
 
 	session, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
@@ -58,7 +73,7 @@ func main() {
 	ntf := notifier.New(session, settings, tracking)
 	cr := crawler.New(tracking.ActiveServers)
 
-	commands.Register(session, settings, tracking, cr)
+	commands.Register(session, settings, tracking, perms, cr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

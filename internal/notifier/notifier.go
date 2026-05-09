@@ -3,9 +3,11 @@ package notifier
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/phx7/albion-killgot/internal/albion"
+	"github.com/phx7/albion-killgot/internal/pricing"
 	"github.com/phx7/albion-killgot/internal/store"
 )
 
@@ -29,6 +31,8 @@ func (n *Notifier) HandleEvent(ctx context.Context, event albion.Event) {
 	if event.TotalVictimKillFame <= 0 {
 		return
 	}
+	slog.Debug("event received", "id", event.EventID, "server", event.Server,
+		"killer", event.Killer.Name, "victim", event.Victim.Name, "fame", event.TotalVictimKillFame)
 
 	entities, err := n.tracking.ListAll(ctx)
 	if err != nil {
@@ -52,13 +56,20 @@ func (n *Notifier) HandleEvent(ctx context.Context, event albion.Event) {
 		}
 
 		matched, isKill, channel := matchEvent(event, tracked, gs)
+		slog.Debug("event match result", "guild", guildID, "matched", matched, "isKill", isKill, "channel", channel,
+			"killsEnabled", gs.KillsEnabled, "killsChannel", gs.KillsChannel,
+			"deathsEnabled", gs.DeathsEnabled, "deathsChannel", gs.DeathsChannel)
 		if matched {
+			slog.Debug("sending kill/death notification", "guild", guildID, "channel", channel, "isKill", isKill)
 			msg := EmbedKill(event, gs, isKill)
-			n.send(guildID, channel, msg)
+			if sent := n.send(guildID, channel, msg); sent != nil {
+				go n.enrichLoot(event, gs, isKill, channel, sent.ID)
+			}
 		}
 
 		// Juicy kills — separate channel, no tracking required
 		if tier, juicyCh := juicyTier(event, gs); tier != "" && juicyCh != "" {
+			slog.Debug("sending juicy notification", "guild", guildID, "channel", juicyCh, "tier", tier)
 			msg := EmbedJuicy(event, gs, tier)
 			n.send(guildID, juicyCh, msg)
 		}
@@ -105,10 +116,41 @@ func (n *Notifier) HandleBattle(ctx context.Context, battle albion.Battle) {
 	}
 }
 
-func (n *Notifier) send(guildID, channelID string, msg *discordgo.MessageSend) {
-	_, err := n.session.ChannelMessageSendComplex(channelID, msg)
+func (n *Notifier) send(guildID, channelID string, msg *discordgo.MessageSend) *discordgo.Message {
+	sent, err := n.session.ChannelMessageSendComplex(channelID, msg)
 	if err != nil {
 		slog.Error("send message", "guild", guildID, "channel", channelID, "err", err)
+		return nil
+	}
+	return sent
+}
+
+func (n *Notifier) enrichLoot(event albion.Event, gs store.GuildSettings, isKill bool, channelID, messageID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	items := pricing.EventItems(event)
+	client := pricing.NewClient(event.Server)
+	prices, err := client.GetPrices(ctx, items)
+	if err != nil {
+		slog.Warn("pricing fetch failed", "event", event.EventID, "err", err)
+		return
+	}
+
+	total := pricing.Total(items, prices)
+	event.LootValue = &albion.LootValue{Equipment: total}
+
+	updated := EmbedKill(event, gs, isKill)
+	if len(updated.Embeds) == 0 {
+		return
+	}
+	_, err = n.session.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		Channel: channelID,
+		ID:      messageID,
+		Embeds:  &updated.Embeds,
+	})
+	if err != nil {
+		slog.Warn("edit message loot", "channel", channelID, "message", messageID, "err", err)
 	}
 }
 
@@ -119,9 +161,15 @@ func matchEvent(event albion.Event, tracked []store.TrackedEntity, gs store.Guil
 	victim := event.Victim
 
 	for _, t := range tracked {
+		slog.Debug("checking tracked entity",
+			"type", t.Type, "entityID", t.EntityID, "name", t.EntityName,
+			"killer", killer.Name, "killerID", killer.ID, "killerGuild", killer.GuildID, "killerAlliance", killer.AllianceID,
+			"victim", victim.Name, "victimID", victim.ID, "victimGuild", victim.GuildID, "victimAlliance", victim.AllianceID,
+		)
 		// Check if killer is tracked -> it's a kill for us
 		if matchesPlayer(killer, t) {
 			if !gs.KillsEnabled {
+				slog.Debug("kills disabled, skipping", "entity", t.EntityName)
 				continue
 			}
 			ch := gs.KillsChannel
@@ -136,6 +184,7 @@ func matchEvent(event albion.Event, tracked []store.TrackedEntity, gs store.Guil
 		// Check if victim is tracked -> it's a death for us
 		if matchesPlayer(victim, t) {
 			if !gs.DeathsEnabled {
+				slog.Debug("deaths disabled, skipping", "entity", t.EntityName)
 				continue
 			}
 			ch := gs.DeathsChannel

@@ -57,6 +57,24 @@ var settingsCommand = &discordgo.ApplicationCommand{
 			Name:        "show",
 			Description: "Show current settings",
 		},
+		{
+			Type:        discordgo.ApplicationCommandOptionSubCommand,
+			Name:        "permit",
+			Description: "Grant a role or user permission to use bot commands",
+			Options: []*discordgo.ApplicationCommandOption{
+				{Type: discordgo.ApplicationCommandOptionRole, Name: "role", Description: "Role to grant"},
+				{Type: discordgo.ApplicationCommandOptionUser, Name: "user", Description: "User to grant"},
+			},
+		},
+		{
+			Type:        discordgo.ApplicationCommandOptionSubCommand,
+			Name:        "revoke",
+			Description: "Revoke a role or user permission to use bot commands",
+			Options: []*discordgo.ApplicationCommandOption{
+				{Type: discordgo.ApplicationCommandOptionRole, Name: "role", Description: "Role to revoke"},
+				{Type: discordgo.ApplicationCommandOptionUser, Name: "user", Description: "User to revoke"},
+			},
+		},
 	},
 }
 
@@ -87,7 +105,12 @@ func providerOption(battlesOnly bool) *discordgo.ApplicationCommandOption {
 	}
 }
 
-func handleSettings(s *discordgo.Session, i *discordgo.InteractionCreate, settings *store.SettingsStore) {
+func handleSettings(s *discordgo.Session, i *discordgo.InteractionCreate, settings *store.SettingsStore, perms *store.PermissionsStore) {
+	if !isOwner(s, i) {
+		replyEphemeral(s, i, "Only the server owner can change settings.")
+		return
+	}
+
 	opts := i.ApplicationCommandData().Options
 	if len(opts) == 0 {
 		replyEphemeral(s, i, "Missing subcommand.")
@@ -167,6 +190,42 @@ func handleSettings(s *discordgo.Session, i *discordgo.InteractionCreate, settin
 
 	case "show":
 		replyEphemeral(s, i, formatSettings(gs))
+		return
+
+	case "permit", "revoke":
+		subOpts := optMap(sub.Options)
+		var roleID, userID string
+		if opt, ok := subOpts["role"]; ok {
+			roleID = opt.RoleValue(s, guildID).ID
+		}
+		if opt, ok := subOpts["user"]; ok {
+			userID = opt.UserValue(s).ID
+		}
+		if roleID == "" && userID == "" {
+			replyEphemeral(s, i, "Specify a role or user.")
+			return
+		}
+		var err error
+		if sub.Name == "permit" {
+			err = perms.Grant(ctx, guildID, roleID, userID)
+		} else {
+			err = perms.Revoke(ctx, guildID, roleID, userID)
+		}
+		if err != nil {
+			replyEphemeral(s, i, fmt.Sprintf("Failed: %v", err))
+			return
+		}
+		action := "granted"
+		if sub.Name == "revoke" {
+			action = "revoked"
+		}
+		target := ""
+		if roleID != "" {
+			target = "<@&" + roleID + ">"
+		} else {
+			target = "<@" + userID + ">"
+		}
+		replyEphemeral(s, i, fmt.Sprintf("Permission %s for %s.", action, target))
 		return
 	}
 

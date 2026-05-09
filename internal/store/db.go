@@ -71,6 +71,15 @@ CREATE TABLE IF NOT EXISTS tracked_entities (
     deaths_channel TEXT,
     UNIQUE(guild_id, entity_type, entity_id)
 );
+
+CREATE TABLE IF NOT EXISTS permissions (
+    permission_id  INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id       TEXT NOT NULL,
+    role_id        TEXT,
+    user_id        TEXT,
+    CHECK(role_id IS NOT NULL OR user_id IS NOT NULL),
+    UNIQUE(guild_id, role_id, user_id)
+);
 `)
 	return err
 }

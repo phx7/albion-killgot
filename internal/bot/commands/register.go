@@ -14,12 +14,13 @@ type CrawlerSyncer interface {
 }
 
 // Register registers all slash commands and their handlers with the session.
-func Register(s *discordgo.Session, settings *store.SettingsStore, tracking *store.TrackingStore, cr CrawlerSyncer) {
+func Register(s *discordgo.Session, settings *store.SettingsStore, tracking *store.TrackingStore, perms *store.PermissionsStore, cr CrawlerSyncer) {
 	cmds := []*discordgo.ApplicationCommand{
 		trackCommand,
 		untrackCommand,
 		listCommand,
 		settingsCommand,
+		testCommand,
 	}
 
 	registered, err := s.ApplicationCommandBulkOverwrite(s.State.User.ID, "", cmds)
@@ -38,13 +39,31 @@ func Register(s *discordgo.Session, settings *store.SettingsStore, tracking *sto
 		name := i.ApplicationCommandData().Name
 		switch name {
 		case "track":
+			if !isAuthorized(s, i, perms) {
+				replyEphemeral(s, i, "You don't have permission to use this command.")
+				return
+			}
 			handleTrack(s, i, tracking, cr)
 		case "untrack":
+			if !isAuthorized(s, i, perms) {
+				replyEphemeral(s, i, "You don't have permission to use this command.")
+				return
+			}
 			handleUntrack(s, i, tracking)
 		case "list":
+			if !isAuthorized(s, i, perms) {
+				replyEphemeral(s, i, "You don't have permission to use this command.")
+				return
+			}
 			handleList(s, i, tracking)
 		case "settings":
-			handleSettings(s, i, settings)
+			handleSettings(s, i, settings, perms)
+		case "test":
+			if !isAuthorized(s, i, perms) {
+				replyEphemeral(s, i, "You don't have permission to use this command.")
+				return
+			}
+			handleTest(s, i, settings)
 		}
 	})
 }

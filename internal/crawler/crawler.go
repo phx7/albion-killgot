@@ -118,11 +118,12 @@ func (c *Crawler) runEvents(ctx context.Context, server albion.Server, client *a
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			events, err := c.fetchEventsTo(ctx, server, client, latestID)
+			events, newLatestID, err := c.fetchEventsTo(ctx, server, client, latestID)
 			if err != nil {
 				slog.Error("fetch events", "server", server.ID, "err", err)
 				continue
 			}
+			latestID = newLatestID
 			for _, e := range events {
 				if e.EventID > latestID {
 					latestID = e.EventID
@@ -147,11 +148,12 @@ func (c *Crawler) runBattles(ctx context.Context, server albion.Server, client *
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			battles, err := c.fetchBattlesTo(ctx, server, client, latestID)
+			battles, newLatestID, err := c.fetchBattlesTo(ctx, server, client, latestID)
 			if err != nil {
 				slog.Error("fetch battles", "server", server.ID, "err", err)
 				continue
 			}
+			latestID = newLatestID
 			for _, b := range battles {
 				if b.ID > latestID {
 					latestID = b.ID
@@ -166,13 +168,13 @@ func (c *Crawler) runBattles(ctx context.Context, server albion.Server, client *
 	}
 }
 
-func (c *Crawler) fetchEventsTo(ctx context.Context, server albion.Server, client *albion.Client, latestID int64) ([]albion.Event, error) {
+func (c *Crawler) fetchEventsTo(ctx context.Context, server albion.Server, client *albion.Client, latestID int64) ([]albion.Event, int64, error) {
 	var result []albion.Event
 
 	for offset := 0; offset < 1000; {
 		batch, err := client.GetEvents(ctx, offset)
 		if err != nil {
-			return nil, err
+			return nil, latestID, err
 		}
 		if len(batch) == 0 {
 			break
@@ -200,16 +202,16 @@ func (c *Crawler) fetchEventsTo(ctx context.Context, server albion.Server, clien
 	}
 
 	sort.Slice(result, func(i, j int) bool { return result[i].EventID < result[j].EventID })
-	return result, nil
+	return result, latestID, nil
 }
 
-func (c *Crawler) fetchBattlesTo(ctx context.Context, server albion.Server, client *albion.Client, latestID int64) ([]albion.Battle, error) {
+func (c *Crawler) fetchBattlesTo(ctx context.Context, server albion.Server, client *albion.Client, latestID int64) ([]albion.Battle, int64, error) {
 	var result []albion.Battle
 
 	for offset := 0; offset < 1000; {
 		batch, err := client.GetBattles(ctx, offset)
 		if err != nil {
-			return nil, err
+			return nil, latestID, err
 		}
 		if len(batch) == 0 {
 			break
@@ -236,5 +238,5 @@ func (c *Crawler) fetchBattlesTo(ctx context.Context, server albion.Server, clie
 	}
 
 	sort.Slice(result, func(i, j int) bool { return result[i].ID < result[j].ID })
-	return result, nil
+	return result, latestID, nil
 }

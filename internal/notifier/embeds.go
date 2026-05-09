@@ -61,9 +61,10 @@ func guildField(p albion.EventPlayer) string {
 
 // EmbedKill builds a text embed for a kill or death event.
 func EmbedKill(event albion.Event, gs store.GuildSettings, isKill bool) *discordgo.MessageSend {
-	lootSum := int64(0)
+	lootStr := "⏳"
 	if event.LootValue != nil {
-		lootSum = event.LootValue.Equipment + event.LootValue.Inventory
+		lootSum := event.LootValue.Equipment + event.LootValue.Inventory
+		lootStr = fmtNumber(lootSum)
 	}
 
 	color := colorGrey
@@ -119,7 +120,7 @@ func EmbedKill(event albion.Event, gs store.GuildSettings, isKill bool) *discord
 		},
 		Fields: []*discordgo.MessageEmbedField{
 			{Name: "Fame", Value: fmtNumber(event.TotalVictimKillFame), Inline: true},
-			{Name: "Loot Value", Value: fmtNumber(lootSum), Inline: true},
+			{Name: "Loot Value", Value: lootStr, Inline: true},
 			{Name: "​", Value: "​", Inline: true},
 			{Name: "Killer Guild", Value: guildField(event.Killer), Inline: true},
 			{Name: "Victim Guild", Value: guildField(event.Victim), Inline: true},

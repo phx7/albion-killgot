@@ -1,4 +1,4 @@
-# albion-killgot
+# albion-kill<img src="https://go.dev/blog/go-brand/Go-Logo/SVG/Go-Logo_Blue.svg" height="24" alt="go">t
 
 Discord bot for tracking kills, deaths, and battles in Albion Online. Written in Go.
 
@@ -34,7 +34,7 @@ Then run the `.exe`.
 |---------|-------------|
 | `/track player` | Track a player |
 | `/track guild` | Track a guild |
-| `/track alliance` | Track an alliance |
+| `/track alliance` | Track an alliance by ID |
 | `/untrack player/guild/alliance` | Stop tracking |
 | `/list` | Show all tracked entities |
 | `/settings kills` | Configure kill notifications |
@@ -42,6 +42,12 @@ Then run the `.exe`.
 | `/settings battles` | Configure battle notifications |
 | `/settings juicy` | Configure high-value kill notifications |
 | `/settings show` | Show current settings |
+| `/settings permit` | Grant a role or user permission to use bot commands |
+| `/settings revoke` | Revoke a role or user permission |
+| `/test kill` | Send a test kill notification |
+| `/test death` | Send a test death notification |
+
+> `/settings` commands are restricted to the server owner. All other commands require the server owner or an explicitly permitted role/user.
 
 ## Configuration
 
