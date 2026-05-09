@@ -10,7 +10,14 @@ Discord bot for tracking kills, deaths, and battles in Albion Online. Written in
 curl -fsSL https://raw.githubusercontent.com/phx7/albion-killgot/main/install.sh | sudo bash
 ```
 
-The script will download the latest binary, ask for your Discord bot token, and install it as a systemd service.
+The script auto-detects what to do: installs on first run, updates if already installed.
+
+| Command | Description |
+|---------|-------------|
+| `install.sh` | Auto: install or update |
+| `install.sh install` | Fresh install, asks for bot token |
+| `install.sh update` | Download latest release and restart service |
+| `install.sh uninstall` | Stop service and remove all files |
 
 ### Windows
 
